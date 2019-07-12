@@ -356,7 +356,7 @@ public class NucleiMgrAdapter implements LineageData {
 		return 0;*/
 
 
-
+		System.out.println("get first occurence");
 		int timePoints=getNumberOfTimePoints();
 		for (int i = 1; i <= timePoints; i++) {
 			String[] names = getNames(i);
@@ -377,6 +377,7 @@ public class NucleiMgrAdapter implements LineageData {
 
 	@Override
 	public int getLastOccurrenceOf(String name) {
+		System.out.println("get last occurence");
 		for (int i = realTimePoints; i > 0; i--) {
 			String[] names = getNames(i);
 
