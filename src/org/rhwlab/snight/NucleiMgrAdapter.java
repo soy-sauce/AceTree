@@ -1,8 +1,12 @@
 package org.rhwlab.snight;
 
+
 import application_src.application_model.data.LineageData;
+import application_src.application_model.data.TableLineageData;
 
 import java.util.*;
+import static java.lang.Integer.MIN_VALUE;
+
 /*
  * Adapter to interface AceTree 3D Viewing with WormGUIDES
  *
@@ -12,6 +16,7 @@ import java.util.*;
 
 public class NucleiMgrAdapter implements LineageData {
 
+	public final List<Frame> timeFrames;
 	private NucleiMgr nucleiMgr;
 	private ArrayList<ArrayList<double[]>> allPositions;
 	private Hashtable<String, int[]> cellOccurences;
@@ -20,26 +25,92 @@ public class NucleiMgrAdapter implements LineageData {
 	private double[] xyzScale;
 
 
+
 	public NucleiMgrAdapter(NucleiMgr nucleiMgr) {
 		this.nucleiMgr = nucleiMgr;
-		this.cellOccurences = new Hashtable<String, int[]>();
+		//this.cellOccurences = new Hashtable<String, int[]>();
 		this.realTimePoints = nucleiMgr.iEndingIndex; // initialize to this to avoid errors
 		this.allPositions = new ArrayList<ArrayList<double[]>>();
-		preprocessCellOccurrences();
-		preprocessCellPositions();
+		//preprocessCellOccurrences();
+		//preprocessCellPositions();
 		setIsSulstonModeFlag(nucleiMgr.iAncesTree.sulstonmode);
 		System.out.println("NucleiMgrAdapter has isSulstonMode: " + isSulston);
 		this.xyzScale = new double[3];
 		this.xyzScale[0] = this.xyzScale[1] = nucleiMgr.iConfig.iXy_res;
 		this.xyzScale[2] = nucleiMgr.iConfig.iZ_res;
+		this.timeFrames = new ArrayList<>();
+
 	}
 
-	private void preprocessCellOccurrences() {
+
+	public class Frame {
+
+		private List<String> names;
+		private List<Double[]> positions;
+		private List<Double> diameters;
+
+		public Frame() {
+			names = new ArrayList<>();
+			positions = new ArrayList<>();
+			diameters = new ArrayList<>();
+		}
+
+		public void shiftPositions(final double x, final double y, final double z) {
+			for (int i = 0; i < positions.size(); i++) {
+				final Double[] pos = positions.get(i);
+				positions.set(i, new Double[]{pos[0] - x, pos[1] - y, pos[2] - z});
+			}
+		}
+
+		public void addName(String name) {
+			names.add(name);
+		}
+
+		public void addPosition(Double[] position) {
+			positions.add(position);
+		}
+
+		public void addDiameter(Double diameter) {
+			diameters.add(diameter);
+		}
+
+		public String[] getNames() {
+			return names.toArray(new String[names.size()]);
+		}
+
+		public double[][] getPositions() {
+			final double[][] copy = new double[positions.size()][3];
+			for (int i = 0; i < positions.size(); i++) {
+				for (int j = 0; j < 3; j++) {
+					copy[i][j] = positions.get(i)[j];
+				}
+			}
+			return copy;
+		}
+
+		public double[] getDiameters() {
+			final double[] copy = new double[diameters.size()];
+			for (int i = 0; i < diameters.size(); i++) {
+				copy[i] = diameters.get(i);
+			}
+			return copy;
+		}
+
+		@Override
+		public String toString() {
+			String out = "";
+			String[] names = getNames();
+			for (String name : names) {
+				out += name + "\n";
+			}
+			return out;
+		}
+	}
+	//Scans through all timepoints and preprocesses all cells and their start and end occurrence
+	/*private void preprocessCellOccurrences() {
 		int timePoints = getNumberOfTimePoints();
 
-		/*
-		 * First occurences
-		 */
+		//start
 		for (int i = 1; i <= timePoints; i++) {
 			String[] names = getNames(i);
 
@@ -54,16 +125,15 @@ public class NucleiMgrAdapter implements LineageData {
 				if (!cellOccurences.containsKey(name)) {
 					int[] start_end = new int[2];
 					start_end[0] = i;
-					start_end[1] = i; /* to avoid null exceptions if no end time point is found */
+					start_end[1] = i; // to avoid null exceptions if no end time point is found
 
 					cellOccurences.put(name, start_end);
 				}
 			}
 		}
 
-		/*
-		 * Last occurences
-		 */
+
+		//end
 		for (int i = realTimePoints; i > 0; i--) {
 			String[] names = getNames(i);
 
@@ -78,10 +148,12 @@ public class NucleiMgrAdapter implements LineageData {
 			}
 		}
 
-
 	}
 
-	private void preprocessCellPositions() {
+	 */
+
+	//preprocess cell positions for each time point
+	/*private void preprocessCellPositions() {
 		for (int i = 0; i < realTimePoints; i++) {
 			ArrayList<double[]> positions_at_time = new ArrayList<double[]>();
 
@@ -96,10 +168,43 @@ public class NucleiMgrAdapter implements LineageData {
 			allPositions.add(positions_at_time);
 		}
 	}
+*/
 
 	@Override
 	public String[] getNames(int time) {
 		if (time > 0) {
+			Set<String> namesAL= new HashSet<>();
+
+
+			//access vector of nuclei at given time frame
+			Vector<Nucleus> v = nucleiMgr.nuclei_record.get(time);
+//				Vector v = (Vector) nucleiMgr.nuclei_record.get(time - 1);
+
+			//copy nuclei identities to ArrayList names AL
+			for (int m = 0; m < v.size(); ++m) {
+				Nucleus n = v.get(m);
+				if (n.status == 1) {
+					namesAL.add(n.identity); //push back identity
+				}
+			}
+
+
+			List<String> list = new ArrayList<String>(namesAL);
+			//convert ArrayList to String[]
+			int size = namesAL.size();
+			String[] names = new String[size];
+			for (int i = 0; i < size; ++i) {
+				names[i]=list.get(i);
+			}
+
+			return names;
+		}
+		return new String[0];
+
+
+
+		//unedited
+		/*if (time > 0) {
 			ArrayList<String> namesAL = new ArrayList<>(); //named to distinguish between return String[] array
 
 			//access vector of nuclei at given time frame
@@ -119,17 +224,18 @@ public class NucleiMgrAdapter implements LineageData {
 			String[] names = new String[size];
 			for (int i = 0; i < size; ++i) {
 				names[i] = namesAL.get(i);
+
 			}
 
 			return names;
 		}
-		return new String[0];
+		return new String[0];*/
 	}
 
 	@Override
 	public double[][] getPositions(int time) {
 		if (allPositions == null) {
-			preprocessCellPositions();
+			//preprocessCellPositions();
 		}
 
 		ArrayList<double[]> positions = allPositions.get(time);
@@ -142,6 +248,9 @@ public class NucleiMgrAdapter implements LineageData {
 
 		return positions_array;
 	}
+
+
+
 
 	private double[][] getPositions(int time, boolean prvte) {
 		ArrayList<ArrayList<Double>> positionsAL = new ArrayList<ArrayList<Double>>();
@@ -212,6 +321,17 @@ public class NucleiMgrAdapter implements LineageData {
 		}
 
 		return allCellNames;
+
+		/*Set<String> allCellNames = new HashSet<>();
+		for (int i = 0; i < realTimePoints; i++) {
+			String[] namesAti = getNames(i);
+			for (String name : namesAti) {
+				allCellNames.add(name);
+			}
+		}
+
+		ArrayList<String> result=new ArrayList<>(allCellNames);
+		return result;*/
 	}
 
 	@Override
@@ -227,24 +347,46 @@ public class NucleiMgrAdapter implements LineageData {
 	 */
 	@Override
 	public int getFirstOccurrenceOf(String name) {
-		int[] start_end = cellOccurences.get(name);
+	/*	int[] start_end = cellOccurences.get(name);
 
 		if (start_end != null) {
 			return start_end[0];
 		}
 
-		return 0;
+		return 0;*/
+
+
+
+		int timePoints=getNumberOfTimePoints();
+		for (int i = 1; i <= timePoints; i++) {
+			String[] names = getNames(i);
+
+			if (names.length == 0) {
+				this.realTimePoints = i;
+				break;
+			}
+
+			for (int j = 0; j < names.length; j++) {
+				if(names[j].equalsIgnoreCase(name)){
+					return i;
+				}
+			}
+		}
+		return -1;
 	}
 
 	@Override
 	public int getLastOccurrenceOf(String name) {
-		int[] start_end = cellOccurences.get(name);
+		for (int i = realTimePoints; i > 0; i--) {
+			String[] names = getNames(i);
 
-		if (start_end != null) {
-			return start_end[1];
+			for (int j = 0; j < names.length; j++) {
+				if(names[j].equalsIgnoreCase(name)){
+					return i;
+				}
+			}
 		}
-
-		return 0;
+		return -1;
 	}
 
 	@Override
@@ -280,4 +422,9 @@ public class NucleiMgrAdapter implements LineageData {
 	public double[] getXYZScale() {
 		return this.xyzScale;
 	}
+
+
+
+
+
 }
